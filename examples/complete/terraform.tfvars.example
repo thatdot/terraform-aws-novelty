@@ -63,30 +63,6 @@ container_port = 8080
 container_cpu    = 4096  # 4 vCPU
 container_memory = 8192  # 8 GB
 
-# Environment variables (optional)
-container_environment = [
-  {
-    name  = "JAVA_OPTS"
-    value = "-Xms4g -Xmx6g"
-  },
-  {
-    name  = "NOVELTY_WEBSERVER_ADDRESS"
-    value = "0.0.0.0"
-  }
-]
-
-# Secrets from AWS Secrets Manager or SSM Parameter Store (optional)
-# container_secrets = [
-#   {
-#     name      = "DATABASE_PASSWORD"
-#     valueFrom = "arn:aws:secretsmanager:us-west-2:123456789012:secret:prod/novelty/db-password"
-#   },
-#   {
-#     name      = "API_KEY"
-#     valueFrom = "arn:aws:ssm:us-west-2:123456789012:parameter/prod/novelty/api-key"
-#   }
-# ]
-
 # -----------------------------------------------------------------------------
 # Load Balancer Configuration
 # -----------------------------------------------------------------------------
