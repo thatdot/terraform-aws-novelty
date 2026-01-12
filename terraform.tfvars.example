@@ -1,0 +1,23 @@
+# AWS Configuration
+aws_region   = "us-west-2"
+project_name = "thatdot-ecs"
+environment  = "dev"
+
+# ECS Configuration
+cluster_name     = "thatdot-ecs-cluster"
+service_name     = "thatdot-ecs-service"
+container_name   = "novelty"
+container_port   = 8080
+container_cpu    = 2048
+container_memory = 4096
+
+# Container Image (Required)
+# You must provide your own ECR image URI
+container_image = "<your-account-id>.dkr.ecr.<region>.amazonaws.com/thatdot/novelty:<tag>"
+
+# Novelty License (Required)
+license_key        = ""                           # Required - your Novelty license key
+license_server_uri = "https://license.thatdot.com" # License server URI
+
+# Health Check
+health_check_path = "/api/v1/admin/liveness"

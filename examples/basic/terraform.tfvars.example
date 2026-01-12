@@ -1,0 +1,17 @@
+# -----------------------------------------------------------------------------
+# Example Configuration for Basic Deployment
+# -----------------------------------------------------------------------------
+# Copy this file to terraform.tfvars and customize for your environment.
+# Lines starting with # are comments.
+# -----------------------------------------------------------------------------
+
+# AWS Configuration
+aws_region = "us-west-2"
+
+# Container Image (Required)
+# You must provide your own ECR image URI
+container_image = "<your-account-id>.dkr.ecr.<region>.amazonaws.com/thatdot/novelty:<tag>"
+
+# Novelty License (Required)
+license_key        = ""                           # Required - your Novelty license key
+license_server_uri = "https://license.thatdot.com" # License server URI
