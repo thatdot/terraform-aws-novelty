@@ -129,24 +129,6 @@ variable "container_memory" {
   default     = 8192
 }
 
-variable "container_environment" {
-  description = "Environment variables"
-  type = list(object({
-    name  = string
-    value = string
-  }))
-  default = []
-}
-
-variable "container_secrets" {
-  description = "Secrets from SSM/Secrets Manager"
-  type = list(object({
-    name      = string
-    valueFrom = string
-  }))
-  default = []
-}
-
 # -----------------------------------------------------------------------------
 # Load Balancer Configuration
 # -----------------------------------------------------------------------------

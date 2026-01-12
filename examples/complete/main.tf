@@ -5,8 +5,6 @@
 # - Custom VPC and subnets
 # - HTTPS with ACM certificate
 # - Custom container configuration
-# - Environment variables and secrets
-# - Multiple task instances for high availability
 #
 # Usage:
 #   # Copy the example tfvars file and customize
@@ -169,12 +167,6 @@ module "novelty" {
   # Novelty license configuration
   license_key        = var.license_key
   license_server_uri = var.license_server_uri
-
-  # Environment variables
-  container_environment = var.container_environment
-
-  # Secrets (from SSM Parameter Store or Secrets Manager)
-  container_secrets = var.container_secrets
 
   # Load balancer configuration
   internal_alb               = var.internal_alb

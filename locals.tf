@@ -45,19 +45,12 @@ locals {
   # Container Environment Variables
   # -----------------------------------------------------------------------------
 
-  # Default environment variables
-  default_environment = [
-    {
-      name  = "ENVIRONMENT"
-      value = var.environment
-    },
+  container_environment = [
     {
       name  = "JDK_JAVA_OPTIONS"
       value = local.java_opts_value
     }
   ]
-
-  container_environment = concat(local.default_environment, var.container_environment)
 
   # Get current AWS region from provider for log configuration
   # This uses a data source since we can't use var.aws_region anymore (provider config is in root module)

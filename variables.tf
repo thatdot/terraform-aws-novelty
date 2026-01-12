@@ -159,23 +159,6 @@ variable "container_memory" {
   }
 }
 
-variable "container_environment" {
-  description = "Environment variables to pass to the container."
-  type = list(object({
-    name  = string
-    value = string
-  }))
-  default = []
-}
-
-variable "container_secrets" {
-  description = "Secrets to pass to the container from AWS Secrets Manager or SSM Parameter Store."
-  type = list(object({
-    name      = string
-    valueFrom = string
-  }))
-  default = []
-}
 
 # -----------------------------------------------------------------------------
 # Load Balancer Configuration
