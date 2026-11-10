@@ -369,6 +369,7 @@ variable "license_server_uri" {
   description = "Novelty license server URI."
   type        = string
   default     = "https://license.thatdot.com"
+  nullable    = false
 }
 
 variable "java_opts" {
