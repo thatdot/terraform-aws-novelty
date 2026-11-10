@@ -90,7 +90,12 @@ Store the key as a plain string, as the command above does. If you keep it insid
 
 ECS reads the secret when a task starts and passes it to the container as the `CONFIG_FORCE_thatdot_novelty_license__key` environment variable, which Novelty reads as its `thatdot.novelty.license-key` setting. The module grants the task execution role read access to that secret. The key does not appear in the task definition or in the container logs, and it stays out of Terraform state as long as the secret's value is set outside Terraform (as above).
 
-**Do not pass the license key through `java_opts` or `container_environment`.** Both are stored in plain text in the ECS task definition, and the JVM prints the full `JDK_JAVA_OPTIONS` value to the log every time the container starts.
+Two things follow from ECS fetching the secret at task start:
+
+- The task's subnets need a route to Secrets Manager (or SSM): a NAT gateway, a public IP, or a `secretsmanager`/`ssm` VPC interface endpoint.
+- Changing the secret's value does not restart running tasks. After rotating the key, run `aws ecs update-service --cluster <cluster> --service <service> --force-new-deployment`.
+
+**Do not pass the license key through `java_opts` or `container_environment`.** Both are stored in plain text in the ECS task definition, and the JVM prints the full `JDK_JAVA_OPTIONS` value to the log every time the container starts. The module rejects both.
 
 ## Quick Start
 
@@ -417,22 +422,6 @@ resource "aws_route53_record" "novelty" {
 ```
 
 ## Upgrading
-
-### To module 2.0.0 (Novelty 1.2.0): v2 API health check and secret-based license key
-
-**Breaking: the `license_key` input has been removed.** It placed the key in plain text in the ECS task definition, and the JVM printed it to CloudWatch Logs at every start. To upgrade:
-
-1. Store the key in Secrets Manager (see [License Key](#license-key)).
-2. Replace `license_key = ...` with `license_key_secret_arn = "<secret ARN>"`. Terraform reports `Unsupported argument` until `license_key` is removed from your configuration.
-3. Apply, then rotate the license key: earlier task definition revisions and existing log streams still contain the old one. ECS reads secrets only when a task starts, so after changing the secret's value run `aws ecs update-service --cluster <cluster> --service <service> --force-new-deployment`.
-
-Other changes:
-
-- **`health_check_path` now defaults to `/api/v2/system/liveness`** (was `/api/v1/admin/liveness`). Novelty 1.2.0 returns `410 Gone` for every v1 path, so the old default marks tasks unhealthy. If you run a release that predates the v2 API, set `health_check_path = "/api/v1/admin/liveness"` explicitly.
-- Tasks now fetch the license key from Secrets Manager (or SSM) at start, so their subnets need a route to that service: a NAT gateway, a public IP, or a `secretsmanager`/`ssm` VPC interface endpoint.
-- New optional inputs `container_environment` and `container_secrets`.
-- The module adds `-Dconfig.override_with_env_vars=true` to `JDK_JAVA_OPTIONS` so that `CONFIG_FORCE_*` environment variables take effect.
-- The task execution role gains an inline policy allowing it to read the configured secrets.
 
 ### From Direct Terraform to Module
 
