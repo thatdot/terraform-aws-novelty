@@ -32,7 +32,7 @@ locals {
   )
 
   # -----------------------------------------------------------------------------
-  # Novelty License Configuration
+  # JVM Options
   # -----------------------------------------------------------------------------
 
   # Lets the JVM read configuration from CONFIG_FORCE_* environment variables
@@ -74,6 +74,14 @@ locals {
       }
     ],
     var.container_secrets
+  )
+
+  # Every environment variable and secret name in the container. ECS rejects
+  # duplicates, and a caller entry that repeats a module-set name (such as
+  # JDK_JAVA_OPTIONS) would override it.
+  container_variable_names = concat(
+    [for env in local.container_environment : env.name],
+    [for secret in local.container_secrets : secret.name]
   )
 
   # ARNs the execution role must be able to read. A Secrets Manager valueFrom
