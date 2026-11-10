@@ -19,8 +19,6 @@ variable "container_image" {
   type = string
 }
 
-# ARN of a pre-existing Secrets Manager secret holding the license key.
-# The CI role cannot manage secrets, and the key never passes through Terraform.
 variable "license_key_secret_arn" {
   type = string
 }

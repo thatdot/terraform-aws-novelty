@@ -95,7 +95,7 @@ Two things follow from ECS fetching the secret at task start:
 - The task's subnets need a route to Secrets Manager (or SSM): a NAT gateway, a public IP, or a `secretsmanager`/`ssm` VPC interface endpoint.
 - Changing the secret's value does not restart running tasks. After rotating the key, run `aws ecs update-service --cluster <cluster> --service <service> --force-new-deployment`.
 
-**Do not pass the license key through `java_opts` or `container_environment`.** Both are stored in plain text in the ECS task definition, and the JVM prints the full `JDK_JAVA_OPTIONS` value to the log every time the container starts. The module rejects both.
+**Do not pass the license key through `java_opts` or `container_environment`.** Both are stored in plain text in the ECS task definition, and the JVM prints the full `JDK_JAVA_OPTIONS` value to the log every time the container starts.
 
 ## Quick Start
 
@@ -339,7 +339,7 @@ module "novelty" {
   license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:novelty/license-key-AbCdEf"
 
   vpc_id     = module.vpc.vpc_id
-  subnet_ids      = module.vpc.public_subnets
+  subnet_ids = module.vpc.public_subnets
 }
 ```
 
@@ -404,6 +404,7 @@ module "novelty" {
   container_image = "<your-account-id>.dkr.ecr.<region>.amazonaws.com/thatdot/novelty:<tag>"
 
   license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:novelty/license-key-AbCdEf"
+
   enable_https    = true
   certificate_arn = aws_acm_certificate.novelty.arn
 }

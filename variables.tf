@@ -187,7 +187,7 @@ variable "container_secrets" {
   nullable = false
 
   validation {
-    condition     = alltrue([for secret in var.container_secrets : can(regex("^arn:aws[a-z-]*:(secretsmanager|ssm):", secret.valueFrom))])
+    condition     = alltrue([for secret in var.container_secrets : can(regex("^arn:aws[a-z-]*:(secretsmanager|ssm):\\S+$", secret.valueFrom))])
     error_message = "Each container_secrets valueFrom must be the full ARN of a Secrets Manager secret or an SSM parameter, because it is also used in the execution role's IAM policy."
   }
 
@@ -211,9 +211,10 @@ variable "internal_alb" {
 }
 
 variable "health_check_path" {
-  description = "Health check path used by the ALB target group and the container health check. Defaults to the v2 API liveness endpoint. Novelty 1.2.0 and later return 410 for every v1 path."
+  description = "Health check path used by the ALB target group and the container health check. Defaults to the v2 API liveness endpoint."
   type        = string
   default     = "/api/v2/system/liveness"
+  nullable    = false
 
   validation {
     condition     = can(regex("^/", var.health_check_path))
@@ -360,7 +361,7 @@ variable "license_key_secret_arn" {
   type        = string
 
   validation {
-    condition     = can(regex("^arn:aws[a-z-]*:(secretsmanager|ssm):", var.license_key_secret_arn))
+    condition     = can(regex("^arn:aws[a-z-]*:(secretsmanager|ssm):\\S+$", var.license_key_secret_arn))
     error_message = "license_key_secret_arn must be the ARN of a Secrets Manager secret or an SSM parameter."
   }
 }
@@ -370,6 +371,11 @@ variable "license_server_uri" {
   type        = string
   default     = "https://license.thatdot.com"
   nullable    = false
+
+  validation {
+    condition     = can(regex("^https?://\\S+$", var.license_server_uri))
+    error_message = "license_server_uri must be an http(s) URL."
+  }
 }
 
 variable "java_opts" {
@@ -377,9 +383,4 @@ variable "java_opts" {
   type        = string
   default     = ""
   nullable    = false
-
-  validation {
-    condition     = !strcontains(var.java_opts, "license-key")
-    error_message = "Do not pass the license key in java_opts: it is stored in plain text and printed to the container log. Use license_key_secret_arn."
-  }
 }

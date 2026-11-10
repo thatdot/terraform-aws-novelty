@@ -19,6 +19,3 @@ container_image = "<your-account-id>.dkr.ecr.<region>.amazonaws.com/thatdot/nove
 # Store the key in AWS Secrets Manager and pass the secret's ARN here
 license_key_secret_arn = ""                            # Required - ARN of the secret holding your license key
 license_server_uri     = "https://license.thatdot.com" # License server URI
-
-# Health Check
-health_check_path = "/api/v2/system/liveness"
