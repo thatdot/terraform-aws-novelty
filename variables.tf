@@ -375,6 +375,7 @@ variable "java_opts" {
   description = "Additional Java options passed to the Novelty JVM via the JDK_JAVA_OPTIONS environment variable. The value is stored in plain text in the task definition and echoed to the container log at startup, so never put secrets here."
   type        = string
   default     = ""
+  nullable    = false
 
   validation {
     condition     = !strcontains(var.java_opts, "license-key")

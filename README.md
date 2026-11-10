@@ -86,6 +86,8 @@ module "novelty" {
 }
 ```
 
+Store the key as a plain string, as the command above does. If you keep it inside a JSON secret (the AWS console's key/value editor creates one), append the ECS `:json-key::` suffix to the ARN so only the key is injected.
+
 ECS reads the secret when a task starts and passes it to the container as the `CONFIG_FORCE_thatdot_novelty_license__key` environment variable, which Novelty reads as its `thatdot.novelty.license-key` setting. The module grants the task execution role read access to that secret. The key does not appear in the task definition or in the container logs, and it stays out of Terraform state as long as the secret's value is set outside Terraform (as above).
 
 **Do not pass the license key through `java_opts` or `container_environment`.** Both are stored in plain text in the ECS task definition, and the JVM prints the full `JDK_JAVA_OPTIONS` value to the log every time the container starts.
@@ -97,7 +99,7 @@ ECS reads the secret when a task starts and passes it to the container as the `C
 ```hcl
 module "novelty" {
   source  = "thatdot/novelty/aws"
-  version = "1.0.0"
+  version = "~> 2.0"
 
   project_name = "my-novelty"
 
@@ -118,7 +120,7 @@ output "url" {
 ```hcl
 module "novelty" {
   source  = "thatdot/novelty/aws"
-  version = "1.0.0"
+  version = "~> 2.0"
 
   project_name = "novelty-prod"
   environment  = "prod"
@@ -381,7 +383,7 @@ module "novelty" {
   container_secrets = [
     {
       name      = "DATABASE_PASSWORD"
-      valueFrom = "arn:aws:secretsmanager:us-west-2:123456789012:secret:db-pass"
+      valueFrom = "arn:aws:secretsmanager:us-west-2:123456789012:secret:db-pass-AbCdEf"
     }
   ]
 }
@@ -416,7 +418,7 @@ resource "aws_route53_record" "novelty" {
 
 ## Upgrading
 
-### To Novelty 1.2.0: v2 API health check and secret-based license key
+### To module 2.0.0 (Novelty 1.2.0): v2 API health check and secret-based license key
 
 **Breaking: the `license_key` input has been removed.** It placed the key in plain text in the ECS task definition, and the JVM printed it to CloudWatch Logs at every start. To upgrade:
 
