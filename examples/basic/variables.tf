@@ -28,14 +28,13 @@ variable "container_image" {
 # Novelty License Configuration
 # -----------------------------------------------------------------------------
 
-variable "license_key" {
-  description = "Novelty license key."
+variable "license_key_secret_arn" {
+  description = "ARN of the AWS Secrets Manager secret that holds the Novelty license key. Create it outside Terraform so the key never enters Terraform variables or state."
   type        = string
-  sensitive   = true
 }
 
-variable "license_server_uri" {
-  description = "Novelty license server URI."
+variable "java_opts" {
+  description = "Additional JVM options for Novelty (plain text, logged at startup: no secrets)."
   type        = string
-  default     = "https://license.thatdot.com"
+  default     = ""
 }

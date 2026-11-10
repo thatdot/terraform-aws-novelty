@@ -8,13 +8,15 @@ Simplest deployment of Novelty on AWS ECS Fargate with minimal configuration.
 - Terraform >= 1.5.0
 - Default VPC in the target region
 - Novelty Docker image pushed to your private ECR repository
+- Novelty license key stored in AWS Secrets Manager (see [License Key](../../README.md#license-key)); you pass the secret's ARN as `license_key_secret_arn`
 
 ## Usage
 
 1. Create `terraform.tfvars`:
 
 ```hcl
-container_image = ""
+container_image        = "YOUR_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/thatdot/novelty:1.2.0"
+license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:novelty/license-key-AbCdEf"
 ```
 
 2. Deploy:

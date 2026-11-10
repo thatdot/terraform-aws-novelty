@@ -52,6 +52,7 @@ Before using this module, you must:
 1. **Have access to the Novelty Docker image** - Contact thatDot for access
 2. **Push the image to your private ECR repository** - The module expects the image to be available in ECR
 3. **Configure ECR authentication** - Ensure your ECS tasks can pull from your ECR repository
+4. **Store your Novelty license key in AWS Secrets Manager** - See [License Key](#license-key)
 
 ### Setting up ECR
 
@@ -67,6 +68,35 @@ docker tag thatdot/novelty:latest YOUR_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.co
 docker push YOUR_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/thatdot/novelty:latest
 ```
 
+## License Key
+
+Novelty needs a license key to start. Keep it in AWS Secrets Manager and give the module the secret's ARN (the complete ARN, including the random suffix Secrets Manager adds to the name):
+
+```bash
+aws secretsmanager create-secret \
+  --name novelty/license-key \
+  --secret-string "$NOVELTY_LICENSE_KEY" \
+  --query ARN --output text
+```
+
+```hcl
+module "novelty" {
+  # ...
+  license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:novelty/license-key-AbCdEf"
+}
+```
+
+Store the key as a plain string, as the command above does. If you keep it inside a JSON secret (the AWS console's key/value editor creates one), append `:<json-key>::` to the ARN, where `<json-key>` is the name of the JSON field holding the key (for example `...license-key-AbCdEf:license::`), so only that value is injected.
+
+ECS reads the secret when a task starts and passes it to the container as the `CONFIG_FORCE_thatdot_novelty_license__key` environment variable, which Novelty reads as its `thatdot.novelty.license-key` setting. The module grants the task execution role read access to that secret. The key does not appear in the task definition or in the container logs, and it stays out of Terraform state as long as the secret's value is set outside Terraform (as above).
+
+Two things follow from ECS fetching the secret at task start:
+
+- The task's subnets need a route to Secrets Manager (or SSM): a NAT gateway, a public IP, or a `secretsmanager`/`ssm` VPC interface endpoint.
+- Changing the secret's value does not restart running tasks. After rotating the key, run `aws ecs update-service --cluster <cluster> --service <service> --force-new-deployment`.
+
+**Do not pass the license key through `java_opts` or `container_environment`.** Both are stored in plain text in the ECS task definition, and the JVM prints the full `JDK_JAVA_OPTIONS` value to the log every time the container starts.
+
 ## Quick Start
 
 ### Minimal Configuration
@@ -74,12 +104,15 @@ docker push YOUR_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/thatdot/novelty:late
 ```hcl
 module "novelty" {
   source  = "thatdot/novelty/aws"
-  version = "1.0.0"
+  version = "~> 2.0"
 
   project_name = "my-novelty"
 
   # Required: Your ECR image URI
   container_image = "<your-account-id>.dkr.ecr.<region>.amazonaws.com/thatdot/novelty:<tag>"
+
+  # Required: ARN of the Secrets Manager secret holding your license key
+  license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:novelty/license-key-AbCdEf"
 }
 
 output "url" {
@@ -92,13 +125,16 @@ output "url" {
 ```hcl
 module "novelty" {
   source  = "thatdot/novelty/aws"
-  version = "1.0.0"
+  version = "~> 2.0"
 
   project_name = "novelty-prod"
   environment  = "prod"
 
   # Required: Your ECR image URI
   container_image = "<your-account-id>.dkr.ecr.<region>.amazonaws.com/thatdot/novelty:<tag>"
+
+  # Required: ARN of the Secrets Manager secret holding your license key
+  license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:novelty/license-key-AbCdEf"
 
   # Custom VPC
   vpc_id     = "vpc-0123456789abcdef0"
@@ -150,6 +186,7 @@ See the [examples](./examples/) directory for complete usage examples:
 | ----------------- | -------------------------------------------------------------------------------------- | -------- |
 | `project_name`    | Project name for resource naming (3-32 chars, alphanumeric with hyphens)               | `string` |
 | `container_image` | Docker image URI from your ECR repository (e.g., 'account.dkr.ecr.region.amazonaws.com/thatdot/novelty:tag') | `string` |
+| `license_key_secret_arn` | ARN of the Secrets Manager secret (or SSM parameter) holding the license key. See [License Key](#license-key) | `string` |
 
 ### Environment
 
@@ -187,15 +224,16 @@ See the [examples](./examples/) directory for complete usage examples:
 | `container_port`        | Container port                   | `number`       | `8080`        |
 | `container_cpu`         | CPU units (256-16384)            | `number`       | `2048`        |
 | `container_memory`      | Memory in MB                     | `number`       | `4096`        |
-| `container_environment` | Environment variables            | `list(object)` | `[]`          |
+| `container_environment` | Environment variables (plain text) | `list(object)` | `[]`        |
 | `container_secrets`     | Secrets from SSM/Secrets Manager | `list(object)` | `[]`          |
+| `java_opts`             | Additional JVM options, passed via `JDK_JAVA_OPTIONS`. Plain text and logged at startup: no secrets | `string` | `""` |
 
 ### Load Balancer
 
 | Name                               | Description                        | Type     | Default                    |
 | ---------------------------------- | ---------------------------------- | -------- | -------------------------- |
 | `internal_alb`                     | Internal ALB (not internet-facing) | `bool`   | `false`                    |
-| `health_check_path`                | Health check path                  | `string` | `"/api/v1/admin/liveness"` |
+| `health_check_path`                | Health check path                  | `string` | `"/api/v2/system/liveness"` |
 | `health_check_interval`            | Health check interval (seconds)    | `number` | `30`                       |
 | `health_check_timeout`             | Health check timeout (seconds)     | `number` | `5`                        |
 | `health_check_healthy_threshold`   | Healthy threshold                  | `number` | `2`                        |
@@ -291,8 +329,11 @@ module "novelty" {
 
   project_name    = "novelty"
   container_image = "<your-account-id>.dkr.ecr.<region>.amazonaws.com/thatdot/novelty:<tag>"
-  vpc_id          = module.vpc.vpc_id
-  subnet_ids      = module.vpc.public_subnets
+
+  license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:novelty/license-key-AbCdEf"
+
+  vpc_id     = module.vpc.vpc_id
+  subnet_ids = module.vpc.public_subnets
 }
 ```
 
@@ -305,20 +346,29 @@ module "novelty" {
   project_name    = "novelty"
   container_image = "<your-account-id>.dkr.ecr.<region>.amazonaws.com/thatdot/novelty:<tag>"
 
+  license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:novelty/license-key-AbCdEf"
+
+  # JVM options go through java_opts, which the module passes as JDK_JAVA_OPTIONS
+  # (the variable the JVM reads; the image ignores JAVA_OPTS).
+  # Keep the heap below container_memory (4096 MB by default).
+  java_opts = "-Xms2g -Xmx3g"
+
+  # Any Novelty setting can be set with a CONFIG_FORCE_* variable:
+  # "." becomes "_" and "-" becomes "__".
   container_environment = [
     {
-      name  = "JAVA_OPTS"
-      value = "-Xms4g -Xmx6g"
-    },
-    {
-      name  = "NOVELTY_WEBSERVER_ADDRESS"
+      name  = "CONFIG_FORCE_thatdot_novelty_webserver_address"
       value = "0.0.0.0"
     }
   ]
 }
 ```
 
+Values in `java_opts` and `container_environment` are stored in plain text. Use `container_secrets` for anything sensitive.
+
 ### With Secrets
+
+The license key has its own input, `license_key_secret_arn` (see [License Key](#license-key)). Use `container_secrets` for any other secret; each `valueFrom` must be a full ARN.
 
 ```hcl
 module "novelty" {
@@ -327,10 +377,12 @@ module "novelty" {
   project_name    = "novelty"
   container_image = "<your-account-id>.dkr.ecr.<region>.amazonaws.com/thatdot/novelty:<tag>"
 
+  license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:novelty/license-key-AbCdEf"
+
   container_secrets = [
     {
       name      = "DATABASE_PASSWORD"
-      valueFrom = "arn:aws:secretsmanager:us-west-2:123456789012:secret:db-pass"
+      valueFrom = "arn:aws:secretsmanager:us-west-2:123456789012:secret:db-pass-AbCdEf"
     }
   ]
 }
@@ -344,6 +396,9 @@ module "novelty" {
 
   project_name    = "novelty"
   container_image = "<your-account-id>.dkr.ecr.<region>.amazonaws.com/thatdot/novelty:<tag>"
+
+  license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:novelty/license-key-AbCdEf"
+
   enable_https    = true
   certificate_arn = aws_acm_certificate.novelty.arn
 }

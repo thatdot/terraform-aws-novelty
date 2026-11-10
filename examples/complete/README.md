@@ -8,17 +8,19 @@ Production-ready deployment of Novelty on AWS ECS Fargate with HTTPS and custom 
 - Terraform >= 1.5.0
 - Route53 hosted zone for your domain (for HTTPS)
 - Novelty Docker image pushed to your private ECR repository
+- Novelty license key stored in AWS Secrets Manager (see [License Key](../../README.md#license-key)); you pass the secret's ARN as `license_key_secret_arn`
 
 ## Quick Start
 
 1. Create `terraform.tfvars`:
 
 ```hcl
-project_name   = "novelty-prod"
-container_image = "YOUR_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/thatdot/novelty:latest"
-enable_https   = true
-domain_name    = "novelty.example.com"
-hosted_zone_id = "Z0123456789ABCDEFGHIJ"
+project_name           = "novelty-prod"
+container_image        = "YOUR_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/thatdot/novelty:1.2.0"
+license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:novelty/license-key-AbCdEf"
+enable_https           = true
+domain_name            = "novelty.example.com"
+hosted_zone_id         = "Z0123456789ABCDEFGHIJ"
 ```
 
 To find your hosted zone ID:
@@ -41,7 +43,6 @@ terraform apply
 See `terraform.tfvars.example` for all available options including:
 - Custom VPC and subnet configuration
 - Container CPU/memory allocation
-- Environment variables and secrets
 - ALB access restrictions
 
 ## HTTPS Options

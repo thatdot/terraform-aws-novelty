@@ -19,22 +19,23 @@ variable "container_image" {
   type = string
 }
 
-variable "license_key" {
-  type      = string
-  sensitive = true
+variable "license_key_secret_arn" {
+  type = string
 }
 
-variable "license_server_uri" {
-  type = string
+# JVM options for the CI environment, supplied from a repository secret
+variable "java_opts" {
+  type      = string
+  sensitive = true
 }
 
 module "novelty" {
   source = "../"
 
-  project_name       = "thatdot-terraform-ci-novelty"
-  container_image    = var.container_image
-  license_key        = var.license_key
-  license_server_uri = var.license_server_uri
+  project_name           = "thatdot-terraform-ci-novelty"
+  container_image        = var.container_image
+  license_key_secret_arn = var.license_key_secret_arn
+  java_opts              = var.java_opts
 }
 
 output "alb_url" {
@@ -47,4 +48,8 @@ output "ecs_cluster_name" {
 
 output "ecs_service_name" {
   value = module.novelty.ecs_service_name
+}
+
+output "ecs_task_definition_arn" {
+  value = module.novelty.ecs_task_definition_arn
 }

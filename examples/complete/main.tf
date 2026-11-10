@@ -164,9 +164,12 @@ module "novelty" {
   container_cpu    = var.container_cpu
   container_memory = var.container_memory
 
-  # Novelty license configuration
-  license_key        = var.license_key
-  license_server_uri = var.license_server_uri
+  # Novelty license. The key is injected by ECS from Secrets Manager and is
+  # never stored in plain text.
+  license_key_secret_arn = var.license_key_secret_arn
+
+  # Additional JVM options (non-secret settings only)
+  java_opts = var.java_opts
 
   # Load balancer configuration
   internal_alb               = var.internal_alb
