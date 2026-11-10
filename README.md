@@ -328,7 +328,10 @@ module "novelty" {
 
   project_name    = "novelty"
   container_image = "<your-account-id>.dkr.ecr.<region>.amazonaws.com/thatdot/novelty:<tag>"
-  vpc_id          = module.vpc.vpc_id
+
+  license_key_secret_arn = aws_secretsmanager_secret.novelty_license.arn
+
+  vpc_id     = module.vpc.vpc_id
   subnet_ids      = module.vpc.public_subnets
 }
 ```
@@ -372,6 +375,8 @@ module "novelty" {
   project_name    = "novelty"
   container_image = "<your-account-id>.dkr.ecr.<region>.amazonaws.com/thatdot/novelty:<tag>"
 
+  license_key_secret_arn = aws_secretsmanager_secret.novelty_license.arn
+
   container_secrets = [
     {
       name      = "DATABASE_PASSWORD"
@@ -389,6 +394,8 @@ module "novelty" {
 
   project_name    = "novelty"
   container_image = "<your-account-id>.dkr.ecr.<region>.amazonaws.com/thatdot/novelty:<tag>"
+
+  license_key_secret_arn = aws_secretsmanager_secret.novelty_license.arn
   enable_https    = true
   certificate_arn = aws_acm_certificate.novelty.arn
 }

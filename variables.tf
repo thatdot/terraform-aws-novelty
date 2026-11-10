@@ -166,6 +166,11 @@ variable "container_environment" {
     value = string
   }))
   default = []
+
+  validation {
+    condition     = !contains([for env in var.container_environment : env.name], "JDK_JAVA_OPTIONS")
+    error_message = "JDK_JAVA_OPTIONS is set by the module (it carries the flag that makes the license secret work). Pass JVM options through java_opts instead."
+  }
 }
 
 variable "container_secrets" {
@@ -175,6 +180,16 @@ variable "container_secrets" {
     valueFrom = string
   }))
   default = []
+
+  validation {
+    condition     = alltrue([for secret in var.container_secrets : can(regex("^arn:", secret.valueFrom))])
+    error_message = "Each container_secrets valueFrom must be a full ARN (Secrets Manager secret or SSM parameter), because it is also used in the execution role's IAM policy."
+  }
+
+  validation {
+    condition     = !contains([for secret in var.container_secrets : secret.name], "CONFIG_FORCE_thatdot_novelty_license__key")
+    error_message = "CONFIG_FORCE_thatdot_novelty_license__key is set by the module from license_key_secret_arn and must not be repeated in container_secrets."
+  }
 }
 
 # -----------------------------------------------------------------------------

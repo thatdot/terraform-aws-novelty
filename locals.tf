@@ -82,9 +82,7 @@ locals {
   # may end in ':json-key:version-stage:version-id'; IAM needs the bare secret ARN.
   container_secret_arns = distinct([
     for secret in local.container_secrets :
-    can(regex("^arn:[^:]*:secretsmanager:", secret.valueFrom))
-    ? join(":", slice(split(":", secret.valueFrom), 0, min(7, length(split(":", secret.valueFrom)))))
-    : secret.valueFrom
+    try(regex("^arn:[^:]*:secretsmanager:[^:]*:[^:]*:secret:[^:]+", secret.valueFrom), secret.valueFrom)
   ])
 
   # Get current AWS region from provider for log configuration

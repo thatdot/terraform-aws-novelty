@@ -30,7 +30,7 @@ run "defaults" {
   command = plan
 
   variables {
-    license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:novelty/license-AbCdEf:key::"
+    license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:novelty/license-key-AbCdEf:key::"
   }
 
   assert {
@@ -47,7 +47,7 @@ run "defaults" {
     condition = jsondecode(aws_ecs_task_definition.main.container_definitions)[0].secrets == [
       {
         name      = "CONFIG_FORCE_thatdot_novelty_license__key"
-        valueFrom = "arn:aws:secretsmanager:us-west-2:123456789012:secret:novelty/license-AbCdEf:key::"
+        valueFrom = "arn:aws:secretsmanager:us-west-2:123456789012:secret:novelty/license-key-AbCdEf:key::"
       }
     ]
     error_message = "License key must be injected as the CONFIG_FORCE_thatdot_novelty_license__key container secret."
@@ -64,12 +64,15 @@ run "defaults" {
   }
 
   assert {
-    condition     = !strcontains(aws_ecs_task_definition.main.container_definitions, "license-key")
-    error_message = "The license key setting must not appear in the task definition's plain-text configuration."
+    condition = alltrue([
+      for env in jsondecode(aws_ecs_task_definition.main.container_definitions)[0].environment :
+      !strcontains(env.value, "license-key") && !strcontains(lower(env.name), "license")
+    ])
+    error_message = "No license setting may appear in the task definition's plain-text environment."
   }
 
   assert {
-    condition     = jsondecode(aws_iam_role_policy.ecs_task_execution_secrets.policy).Statement[0].Resource == ["arn:aws:secretsmanager:us-west-2:123456789012:secret:novelty/license-AbCdEf"]
+    condition     = jsondecode(aws_iam_role_policy.ecs_task_execution_secrets.policy).Statement[0].Resource == ["arn:aws:secretsmanager:us-west-2:123456789012:secret:novelty/license-key-AbCdEf"]
     error_message = "Execution role must be granted the bare secret ARN (without the json-key suffix)."
   }
 }

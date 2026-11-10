@@ -75,7 +75,10 @@ resource "aws_iam_role_policy" "ecs_task_execution_secrets" {
         Resource = "*"
         Condition = {
           StringEquals = {
-            "kms:ViaService" = "secretsmanager.${local.aws_region}.amazonaws.com"
+            "kms:ViaService" = [
+              "secretsmanager.${local.aws_region}.amazonaws.com",
+              "ssm.${local.aws_region}.amazonaws.com"
+            ]
           }
         }
       }
