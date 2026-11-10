@@ -35,22 +35,57 @@ locals {
   # Novelty License Configuration
   # -----------------------------------------------------------------------------
 
-  # Base Java options for Novelty license configuration
-  license_java_opts = "-Dthatdot.novelty.license-key=${var.license_key} -Dthatdot.novelty.license-server-uri=${var.license_server_uri}"
+  # Lets the JVM read configuration from CONFIG_FORCE_* environment variables
+  # (Typesafe Config). The container image does not enable this itself, and it
+  # is what allows the license key to arrive as an ECS-injected secret.
+  config_env_override_java_opt = "-Dconfig.override_with_env_vars=true"
 
-  # Full JAVA_OPTS combining user-provided and license options
-  java_opts_value = trimspace("${var.java_opts} ${local.license_java_opts}")
+  # Non-secret license configuration. The license key itself is never placed
+  # here: JDK_JAVA_OPTIONS is stored in plain text in the task definition and
+  # the JVM prints it to the log at every start.
+  license_java_opts = "-Dthatdot.novelty.license-server-uri=${var.license_server_uri}"
+
+  # Full JDK_JAVA_OPTIONS combining user-provided, config-override, and license options
+  java_opts_value = trimspace("${var.java_opts} ${local.config_env_override_java_opt} ${local.license_java_opts}")
 
   # -----------------------------------------------------------------------------
   # Container Environment Variables
   # -----------------------------------------------------------------------------
 
-  container_environment = [
-    {
-      name  = "JDK_JAVA_OPTIONS"
-      value = local.java_opts_value
-    }
-  ]
+  container_environment = concat(
+    [
+      {
+        name  = "JDK_JAVA_OPTIONS"
+        value = local.java_opts_value
+      }
+    ],
+    var.container_environment
+  )
+
+  # -----------------------------------------------------------------------------
+  # Container Secrets
+  # -----------------------------------------------------------------------------
+
+  # License key (read by Novelty as the thatdot.novelty.license-key setting),
+  # followed by any user-provided secrets
+  container_secrets = concat(
+    [
+      {
+        name      = "CONFIG_FORCE_thatdot_novelty_license__key"
+        valueFrom = var.license_key_secret_arn
+      }
+    ],
+    var.container_secrets
+  )
+
+  # ARNs the execution role must be able to read. A Secrets Manager valueFrom
+  # may end in ':json-key:version-stage:version-id'; IAM needs the bare secret ARN.
+  container_secret_arns = distinct([
+    for secret in local.container_secrets :
+    can(regex("^arn:[^:]*:secretsmanager:", secret.valueFrom))
+    ? join(":", slice(split(":", secret.valueFrom), 0, min(7, length(split(":", secret.valueFrom)))))
+    : secret.valueFrom
+  ])
 
   # Get current AWS region from provider for log configuration
   # This uses a data source since we can't use var.aws_region anymore (provider config is in root module)

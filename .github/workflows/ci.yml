@@ -24,7 +24,8 @@ concurrency:
 env:
   AWS_REGION: us-west-2
   TF_VAR_container_image: ${{ secrets.CONTAINER_IMAGE }}
-  TF_VAR_license_key: ${{ secrets.LICENSE_KEY }}
+  # ARN of a pre-existing Secrets Manager secret; the key itself never reaches CI
+  TF_VAR_license_key_secret_arn: ${{ secrets.LICENSE_KEY_SECRET_ARN }}
   TF_VAR_license_server_uri: ${{ secrets.LICENSE_SERVER_URI }}
 
 jobs:
@@ -73,6 +74,20 @@ jobs:
           echo "alb_url=$(terraform output -raw alb_url)" >> $GITHUB_OUTPUT
           echo "ecs_cluster_name=$(terraform output -raw ecs_cluster_name)" >> $GITHUB_OUTPUT
           echo "ecs_service_name=$(terraform output -raw ecs_service_name)" >> $GITHUB_OUTPUT
+          echo "ecs_task_definition_arn=$(terraform output -raw ecs_task_definition_arn)" >> $GITHUB_OUTPUT
+
+      - name: Verify License Key Is Not In Task Definition
+        working-directory: .
+        run: |
+          TASK_DEF=$(aws ecs describe-task-definition \
+            --task-definition ${{ steps.tf-outputs.outputs.ecs_task_definition_arn }} \
+            --query 'taskDefinition.containerDefinitions[0]')
+          if echo "$TASK_DEF" | jq -e '[.environment[].value] | any(test("license-key"))' > /dev/null; then
+            echo "License key setting found in plain-text container environment"
+            exit 1
+          fi
+          echo "$TASK_DEF" | jq -e '.secrets | any(.name == "CONFIG_FORCE_thatdot_novelty_license__key")' > /dev/null
+          echo "License key is injected as a container secret only"
 
       - name: Wait for ECS Service Healthy
         working-directory: .
@@ -82,6 +97,23 @@ jobs:
             --cluster ${{ steps.tf-outputs.outputs.ecs_cluster_name }} \
             --services ${{ steps.tf-outputs.outputs.ecs_service_name }}
           echo "ECS service is stable and healthy!"
+
+      - name: Verify Novelty Responds Through ALB
+        working-directory: .
+        run: |
+          ALB_URL="${{ steps.tf-outputs.outputs.alb_url }}"
+          for i in {1..30}; do
+            STATUS=$(curl -s -o /dev/null -w '%{http_code}' "$ALB_URL/api/v2/system/readiness" || true)
+            if [ "$STATUS" = "204" ] || [ "$STATUS" = "200" ]; then
+              echo "Novelty is ready (HTTP $STATUS). Deployed version:"
+              curl -s "$ALB_URL/api/v2/system/systemInfo" | jq .
+              exit 0
+            fi
+            echo "Attempt $i: readiness returned HTTP $STATUS, waiting..."
+            sleep 10
+          done
+          echo "Novelty did not become ready through the ALB"
+          exit 1
 
       - name: Terraform Destroy
         if: always()

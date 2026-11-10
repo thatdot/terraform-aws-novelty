@@ -85,6 +85,8 @@ resource "aws_ecs_task_definition" "main" {
 
       environment = local.container_environment
 
+      secrets = local.container_secrets
+
       healthCheck = {
         command     = ["CMD-SHELL", "curl -f http://localhost:${var.container_port}${var.health_check_path} || exit 1"]
         interval    = 30
@@ -126,7 +128,8 @@ resource "aws_ecs_service" "main" {
   # Ensure the ALB listener is created before the service
   depends_on = [
     aws_lb_listener.http,
-    aws_iam_role_policy_attachment.ecs_task_execution_role_policy
+    aws_iam_role_policy_attachment.ecs_task_execution_role_policy,
+    aws_iam_role_policy.ecs_task_execution_secrets
   ]
 
   # Enable deployment circuit breaker for safer deployments

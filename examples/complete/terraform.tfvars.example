@@ -67,7 +67,7 @@ container_memory = 8192  # 8 GB
 # Load Balancer Configuration
 # -----------------------------------------------------------------------------
 internal_alb      = false # Set true for internal-only access
-health_check_path = "/api/v1/admin/liveness"
+health_check_path = "/api/v2/system/liveness"
 
 # Enable deletion protection in production (disabled by default for easier iteration)
 # enable_deletion_protection = true
@@ -113,5 +113,7 @@ alb_ingress_cidr_blocks = ["0.0.0.0/0"]
 # -----------------------------------------------------------------------------
 # Novelty License Configuration (Required)
 # -----------------------------------------------------------------------------
-license_key        = ""                           # Required - your Novelty license key
-license_server_uri = "https://license.thatdot.com" # License server URI
+# Store the key in AWS Secrets Manager first and pass the secret's ARN here:
+#   aws secretsmanager create-secret --name novelty/license-key --secret-string "$NOVELTY_LICENSE_KEY"
+license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:novelty/license-key-AbCdEf"
+license_server_uri     = "https://license.thatdot.com" # License server URI
