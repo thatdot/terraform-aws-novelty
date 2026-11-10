@@ -366,17 +366,6 @@ variable "license_key_secret_arn" {
   }
 }
 
-variable "license_server_uri" {
-  description = "Novelty license server URI. Leave unset to use the product's built-in default (https://license.thatdot.com)."
-  type        = string
-  default     = null
-
-  validation {
-    condition     = var.license_server_uri == null || can(regex("^https?://\\S+$", var.license_server_uri))
-    error_message = "license_server_uri must be an http(s) URL."
-  }
-}
-
 variable "java_opts" {
   description = "Additional Java options passed to the Novelty JVM via the JDK_JAVA_OPTIONS environment variable. The value is stored in plain text in the task definition and echoed to the container log at startup, so never put secrets here."
   type        = string

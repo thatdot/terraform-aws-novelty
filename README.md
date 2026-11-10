@@ -228,12 +228,6 @@ See the [examples](./examples/) directory for complete usage examples:
 | `container_secrets`     | Secrets from SSM/Secrets Manager | `list(object)` | `[]`          |
 | `java_opts`             | Additional JVM options, passed via `JDK_JAVA_OPTIONS`. Plain text and logged at startup: no secrets | `string` | `""` |
 
-### License
-
-| Name                     | Description                                                                                                   | Type     | Default                         |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------- |
-| `license_server_uri` | Novelty license server URI. Unset uses the product's built-in default | `string` | `null` |
-
 ### Load Balancer
 
 | Name                               | Description                        | Type     | Default                    |
