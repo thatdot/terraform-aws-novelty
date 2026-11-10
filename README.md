@@ -227,7 +227,6 @@ See the [examples](./examples/) directory for complete usage examples:
 
 | Name                     | Description                                                                                                   | Type     | Default                         |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------- |
-| `license_key_secret_arn` | ARN of the Secrets Manager secret (or SSM parameter) holding the license key (required). See [License Key](#license-key) | `string` | n/a                             |
 | `license_server_uri`     | Novelty license server URI                                                                                    | `string` | `"https://license.thatdot.com"` |
 
 ### Load Balancer
