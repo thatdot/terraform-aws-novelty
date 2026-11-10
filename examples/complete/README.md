@@ -8,16 +8,7 @@ Production-ready deployment of Novelty on AWS ECS Fargate with HTTPS and custom 
 - Terraform >= 1.5.0
 - Route53 hosted zone for your domain (for HTTPS)
 - Novelty Docker image pushed to your private ECR repository
-- Novelty license key, stored in AWS Secrets Manager:
-
-```bash
-aws secretsmanager create-secret \
-  --name novelty/license-key \
-  --secret-string "$NOVELTY_LICENSE_KEY" \
-  --query ARN --output text
-```
-
-The command prints the secret's ARN, which you pass as `license_key_secret_arn`. The license key itself never goes into Terraform variables, state, the ECS task definition, or the container logs.
+- Novelty license key stored in AWS Secrets Manager (see [License Key](../../README.md#license-key)); you pass the secret's ARN as `license_key_secret_arn`
 
 ## Quick Start
 

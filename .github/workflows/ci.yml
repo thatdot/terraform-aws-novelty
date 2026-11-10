@@ -109,10 +109,10 @@ jobs:
         run: |
           ALB_URL="${{ steps.tf-outputs.outputs.alb_url }}"
           for i in {1..30}; do
-            STATUS=$(curl -s -o /dev/null -w '%{http_code}' "$ALB_URL/api/v2/system/readiness" || true)
+            STATUS=$(curl -s --max-time 10 -o /dev/null -w '%{http_code}' "$ALB_URL/api/v2/system/readiness" || true)
             if [ "$STATUS" = "204" ] || [ "$STATUS" = "200" ]; then
               echo "Novelty is ready (HTTP $STATUS). Deployed version:"
-              curl -s "$ALB_URL/api/v2/system/systemInfo" | jq . || true
+              curl -s --max-time 10 "$ALB_URL/api/v2/system/systemInfo" | jq . || true
               exit 0
             fi
             echo "Attempt $i: readiness returned HTTP $STATUS, waiting..."

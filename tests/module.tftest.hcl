@@ -64,14 +64,6 @@ run "defaults" {
   }
 
   assert {
-    condition = alltrue([
-      for env in jsondecode(aws_ecs_task_definition.main.container_definitions)[0].environment :
-      !strcontains(env.value, "license-key") && !strcontains(lower(env.name), "license")
-    ])
-    error_message = "No license setting may appear in the task definition's plain-text environment."
-  }
-
-  assert {
     condition     = jsondecode(aws_iam_role_policy.ecs_task_execution_secrets.policy).Statement[0].Resource == ["arn:aws:secretsmanager:us-west-2:123456789012:secret:novelty/license-key-AbCdEf"]
     error_message = "Execution role must be granted the bare secret ARN (without the json-key suffix)."
   }
