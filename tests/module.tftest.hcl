@@ -76,3 +76,61 @@ run "license_secret_created_in_same_configuration" {
     source = "./tests/fixtures/inline_secret"
   }
 }
+
+run "user_secrets_are_granted_once_without_ecs_suffix" {
+  command = plan
+
+  variables {
+    license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:novelty/license-key-AbCdEf"
+    container_secrets = [
+      { name = "DB_USER", valueFrom = "arn:aws:secretsmanager:us-west-2:123456789012:secret:db-AbCdEf:username::" },
+      { name = "DB_PASS", valueFrom = "arn:aws:secretsmanager:us-west-2:123456789012:secret:db-AbCdEf:password::" },
+      { name = "API_KEY", valueFrom = "arn:aws:ssm:us-west-2:123456789012:parameter/novelty/api-key" },
+    ]
+  }
+
+  assert {
+    condition = jsondecode(aws_iam_role_policy.ecs_task_execution_secrets.policy).Statement[0].Resource == [
+      "arn:aws:secretsmanager:us-west-2:123456789012:secret:novelty/license-key-AbCdEf",
+      "arn:aws:secretsmanager:us-west-2:123456789012:secret:db-AbCdEf",
+      "arn:aws:ssm:us-west-2:123456789012:parameter/novelty/api-key",
+    ]
+    error_message = "Execution role should be granted each secret once, by its bare ARN."
+  }
+
+  assert {
+    condition     = length(jsondecode(aws_ecs_task_definition.main.container_definitions)[0].secrets) == 4
+    error_message = "User secrets should be passed through alongside the license secret."
+  }
+}
+
+run "rejects_reserved_names_and_plain_text_license" {
+  command = plan
+
+  variables {
+    license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:novelty/license-key-AbCdEf"
+    java_opts              = "-Dthatdot.novelty.license-key=not-a-real-key"
+    container_environment  = [{ name = "JDK_JAVA_OPTIONS", value = "-Xmx6g" }]
+    container_secrets      = [{ name = "CONFIG_FORCE_thatdot_novelty_license__key", valueFrom = "arn:aws:ssm:us-west-2:123456789012:parameter/x" }]
+  }
+
+  expect_failures = [
+    var.java_opts,
+    var.container_environment,
+    var.container_secrets,
+  ]
+}
+
+run "rejects_non_arn_inputs" {
+  command = plan
+
+  variables {
+    license_key_secret_arn = "novelty/license-key"
+    container_secrets      = [{ name = "DB_PASS", valueFrom = "/novelty/db-pass" }]
+  }
+
+  expect_failures = [
+    var.license_key_secret_arn,
+    var.container_secrets,
+  ]
+}

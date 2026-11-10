@@ -70,7 +70,7 @@ docker push YOUR_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/thatdot/novelty:late
 
 ## License Key
 
-Novelty needs a license key to start. Keep it in AWS Secrets Manager and give the module the secret's ARN:
+Novelty needs a license key to start. Keep it in AWS Secrets Manager and give the module the secret's ARN (the complete ARN, including the random suffix Secrets Manager adds to the name):
 
 ```bash
 aws secretsmanager create-secret \
@@ -86,7 +86,7 @@ module "novelty" {
 }
 ```
 
-ECS reads the secret when a task starts and passes it to the container as the `CONFIG_FORCE_thatdot_novelty_license__key` environment variable, which Novelty reads as its `thatdot.novelty.license-key` setting. The module grants the task execution role read access to that secret. The key does not appear in the task definition, in Terraform state, or in the container logs.
+ECS reads the secret when a task starts and passes it to the container as the `CONFIG_FORCE_thatdot_novelty_license__key` environment variable, which Novelty reads as its `thatdot.novelty.license-key` setting. The module grants the task execution role read access to that secret. The key does not appear in the task definition or in the container logs, and it stays out of Terraform state as long as the secret's value is set outside Terraform (as above).
 
 **Do not pass the license key through `java_opts` or `container_environment`.** Both are stored in plain text in the ECS task definition, and the JVM prints the full `JDK_JAVA_OPTIONS` value to the log every time the container starts.
 
@@ -179,6 +179,7 @@ See the [examples](./examples/) directory for complete usage examples:
 | ----------------- | -------------------------------------------------------------------------------------- | -------- |
 | `project_name`    | Project name for resource naming (3-32 chars, alphanumeric with hyphens)               | `string` |
 | `container_image` | Docker image URI from your ECR repository (e.g., 'account.dkr.ecr.region.amazonaws.com/thatdot/novelty:tag') | `string` |
+| `license_key_secret_arn` | ARN of the Secrets Manager secret (or SSM parameter) holding the license key. See [License Key](#license-key) | `string` |
 
 ### Environment
 
@@ -329,7 +330,7 @@ module "novelty" {
   project_name    = "novelty"
   container_image = "<your-account-id>.dkr.ecr.<region>.amazonaws.com/thatdot/novelty:<tag>"
 
-  license_key_secret_arn = aws_secretsmanager_secret.novelty_license.arn
+  license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:novelty/license-key-AbCdEf"
 
   vpc_id     = module.vpc.vpc_id
   subnet_ids      = module.vpc.public_subnets
@@ -375,7 +376,7 @@ module "novelty" {
   project_name    = "novelty"
   container_image = "<your-account-id>.dkr.ecr.<region>.amazonaws.com/thatdot/novelty:<tag>"
 
-  license_key_secret_arn = aws_secretsmanager_secret.novelty_license.arn
+  license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:novelty/license-key-AbCdEf"
 
   container_secrets = [
     {
@@ -395,7 +396,7 @@ module "novelty" {
   project_name    = "novelty"
   container_image = "<your-account-id>.dkr.ecr.<region>.amazonaws.com/thatdot/novelty:<tag>"
 
-  license_key_secret_arn = aws_secretsmanager_secret.novelty_license.arn
+  license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:novelty/license-key-AbCdEf"
   enable_https    = true
   certificate_arn = aws_acm_certificate.novelty.arn
 }
@@ -421,11 +422,12 @@ resource "aws_route53_record" "novelty" {
 
 1. Store the key in Secrets Manager (see [License Key](#license-key)).
 2. Replace `license_key = ...` with `license_key_secret_arn = "<secret ARN>"`. Terraform reports `Unsupported argument` until `license_key` is removed from your configuration.
-3. Apply, then rotate the license key: earlier task definition revisions and existing log streams still contain the old one.
+3. Apply, then rotate the license key: earlier task definition revisions and existing log streams still contain the old one. ECS reads secrets only when a task starts, so after changing the secret's value run `aws ecs update-service --cluster <cluster> --service <service> --force-new-deployment`.
 
 Other changes:
 
 - **`health_check_path` now defaults to `/api/v2/system/liveness`** (was `/api/v1/admin/liveness`). Novelty 1.2.0 returns `410 Gone` for every v1 path, so the old default marks tasks unhealthy. If you run a release that predates the v2 API, set `health_check_path = "/api/v1/admin/liveness"` explicitly.
+- Tasks now fetch the license key from Secrets Manager (or SSM) at start, so their subnets need a route to that service: a NAT gateway, a public IP, or a `secretsmanager`/`ssm` VPC interface endpoint.
 - New optional inputs `container_environment` and `container_secrets`.
 - The module adds `-Dconfig.override_with_env_vars=true` to `JDK_JAVA_OPTIONS` so that `CONFIG_FORCE_*` environment variables take effect.
 - The task execution role gains an inline policy allowing it to read the configured secrets.

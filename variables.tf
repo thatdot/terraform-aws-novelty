@@ -165,11 +165,15 @@ variable "container_environment" {
     name  = string
     value = string
   }))
-  default = []
+  default  = []
+  nullable = false
 
   validation {
-    condition     = !contains([for env in var.container_environment : env.name], "JDK_JAVA_OPTIONS")
-    error_message = "JDK_JAVA_OPTIONS is set by the module (it carries the flag that makes the license secret work). Pass JVM options through java_opts instead."
+    condition = length(setintersection(
+      [for env in var.container_environment : env.name],
+      ["JDK_JAVA_OPTIONS", "CONFIG_FORCE_thatdot_novelty_license__key"]
+    )) == 0
+    error_message = "JDK_JAVA_OPTIONS and CONFIG_FORCE_thatdot_novelty_license__key are set by the module and must not be set in container_environment. Pass JVM options through java_opts and the license key through license_key_secret_arn."
   }
 }
 
@@ -179,7 +183,8 @@ variable "container_secrets" {
     name      = string
     valueFrom = string
   }))
-  default = []
+  default  = []
+  nullable = false
 
   validation {
     condition     = alltrue([for secret in var.container_secrets : can(regex("^arn:aws[a-z-]*:(secretsmanager|ssm):", secret.valueFrom))])
@@ -187,8 +192,11 @@ variable "container_secrets" {
   }
 
   validation {
-    condition     = !contains([for secret in var.container_secrets : secret.name], "CONFIG_FORCE_thatdot_novelty_license__key")
-    error_message = "CONFIG_FORCE_thatdot_novelty_license__key is set by the module from license_key_secret_arn and must not be repeated in container_secrets."
+    condition = length(setintersection(
+      [for secret in var.container_secrets : secret.name],
+      ["JDK_JAVA_OPTIONS", "CONFIG_FORCE_thatdot_novelty_license__key"]
+    )) == 0
+    error_message = "JDK_JAVA_OPTIONS and CONFIG_FORCE_thatdot_novelty_license__key are set by the module and must not be repeated in container_secrets."
   }
 }
 
@@ -203,7 +211,7 @@ variable "internal_alb" {
 }
 
 variable "health_check_path" {
-  description = "Health check path used by the ALB target group and the container health check. Defaults to the v2 API liveness endpoint (/api/v2/system/readiness is also available). Novelty 1.2.0 and later return 410 for every v1 path."
+  description = "Health check path used by the ALB target group and the container health check. Defaults to the v2 API liveness endpoint. Novelty 1.2.0 and later return 410 for every v1 path."
   type        = string
   default     = "/api/v2/system/liveness"
 
@@ -348,7 +356,7 @@ variable "additional_execution_role_policy_arns" {
 # -----------------------------------------------------------------------------
 
 variable "license_key_secret_arn" {
-  description = "ARN of an AWS Secrets Manager secret (or SSM SecureString parameter) whose value is the Novelty license key. This is required. ECS injects it into the container as the CONFIG_FORCE_thatdot_novelty_license__key environment variable, so the key never appears in the task definition or logs. A Secrets Manager ARN may carry the ':json-key:version-stage:version-id' suffix supported by ECS."
+  description = "ARN of an AWS Secrets Manager secret (or SSM SecureString parameter) whose value is the Novelty license key. This is required. ECS injects it into the container as the CONFIG_FORCE_thatdot_novelty_license__key environment variable, so the key never appears in the task definition or logs. Use the complete ARN, including the random 6-character suffix Secrets Manager appends to the secret name; an ARN built from the name alone does not match in IAM. The ':json-key:version-stage:version-id' suffix supported by ECS is allowed."
   type        = string
 
   validation {
@@ -367,4 +375,9 @@ variable "java_opts" {
   description = "Additional Java options passed to the Novelty JVM via the JDK_JAVA_OPTIONS environment variable. The value is stored in plain text in the task definition and echoed to the container log at startup, so never put secrets here."
   type        = string
   default     = ""
+
+  validation {
+    condition     = !strcontains(var.java_opts, "license-key")
+    error_message = "Do not pass the license key in java_opts: it is stored in plain text and printed to the container log. Use license_key_secret_arn."
+  }
 }
