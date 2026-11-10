@@ -34,7 +34,7 @@ variable "license_key_secret_arn" {
 }
 
 variable "license_server_uri" {
-  description = "Novelty license server URI."
+  description = "Novelty license server URI. Leave unset to use the product default."
   type        = string
-  default     = "https://license.thatdot.com"
+  default     = null
 }

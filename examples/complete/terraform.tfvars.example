@@ -116,4 +116,4 @@ alb_ingress_cidr_blocks = ["0.0.0.0/0"]
 # Store the key in AWS Secrets Manager first and pass the secret's ARN here:
 #   aws secretsmanager create-secret --name novelty/license-key --secret-string "$NOVELTY_LICENSE_KEY"
 license_key_secret_arn = ""                            # Required - ARN of the secret holding your license key
-license_server_uri     = "https://license.thatdot.com" # License server URI
+# license_server_uri = "https://license.thatdot.com" # Optional - defaults to the product's built-in license server

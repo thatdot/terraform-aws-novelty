@@ -57,8 +57,8 @@ run "defaults" {
     condition = one([
       for env in jsondecode(aws_ecs_task_definition.main.container_definitions)[0].environment :
       env.value if env.name == "JDK_JAVA_OPTIONS"
-    ]) == "-Dconfig.override_with_env_vars=true -Dthatdot.novelty.license-server-uri=https://license.thatdot.com"
-    error_message = "JDK_JAVA_OPTIONS must enable CONFIG_FORCE_* overrides, set the license server, and not carry the license key."
+    ]) == "-Dconfig.override_with_env_vars=true"
+    error_message = "JDK_JAVA_OPTIONS must enable CONFIG_FORCE_* overrides, leave the license server to the product default, and not carry the license key."
   }
 
   assert {
@@ -80,6 +80,8 @@ run "user_secrets_are_granted_once_without_ecs_suffix" {
 
   variables {
     license_key_secret_arn = "arn:aws:ssm:us-west-2:123456789012:parameter/novelty/license-key"
+    license_server_uri     = "https://license-server.example.com"
+    java_opts              = "-Xmx3g"
     container_secrets = [
       { name = "DB_USER", valueFrom = "arn:aws:secretsmanager:us-west-2:123456789012:secret:db-AbCdEf:username::" },
       { name = "DB_PASS", valueFrom = "arn:aws:secretsmanager:us-west-2:123456789012:secret:db-AbCdEf:password::" },
@@ -99,6 +101,14 @@ run "user_secrets_are_granted_once_without_ecs_suffix" {
   assert {
     condition     = length(jsondecode(aws_ecs_task_definition.main.container_definitions)[0].secrets) == 4
     error_message = "User secrets should be passed through alongside the license secret."
+  }
+
+  assert {
+    condition = startswith(one([
+      for env in jsondecode(aws_ecs_task_definition.main.container_definitions)[0].environment :
+      env.value if env.name == "JDK_JAVA_OPTIONS"
+    ]), "-Xmx3g -Dconfig.override_with_env_vars=true -Dthatdot.novelty.license-server-uri=https://license-server.example.com")
+    error_message = "A license server override and user java_opts must both reach JDK_JAVA_OPTIONS."
   }
 }
 
