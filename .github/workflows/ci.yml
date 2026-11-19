@@ -145,8 +145,7 @@ jobs:
           for i in {1..12}; do
             STATUS=$(curl -s --max-time 10 -o /dev/null -w '%{http_code}' "$ALB_URL/api/v2/system/readiness" || true)
             if [ "$STATUS" = "204" ] || [ "$STATUS" = "200" ]; then
-              echo "Novelty is ready (HTTP $STATUS). Deployed version:"
-              curl -s --max-time 10 "$ALB_URL/api/v2/system/systemInfo" | jq . || true
+              echo "Novelty is ready (HTTP $STATUS)"
               exit 0
             fi
             echo "Attempt $i: readiness returned HTTP $STATUS, waiting..."
@@ -154,6 +153,34 @@ jobs:
           done
           echo "Novelty did not become ready through the ALB"
           exit 1
+
+      # Records what this run actually tested on the run's summary page. The image
+      # reference is a masked secret and names a moving tag, so the digest and the
+      # build the product reports are the only reliable record.
+      - name: Summarize Deployed Build
+        if: always() && steps.tf-outputs.outcome == 'success'
+        continue-on-error: true
+        working-directory: .
+        run: |
+          CLUSTER="${{ steps.tf-outputs.outputs.ecs_cluster_name }}"
+          SERVICE="${{ steps.tf-outputs.outputs.ecs_service_name }}"
+          TASKS=$(aws ecs list-tasks --cluster "$CLUSTER" --service-name "$SERVICE" \
+            --query 'taskArns[]' --output text)
+          DIGESTS=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks $TASKS \
+            --query 'tasks[].containers[].imageDigest' --output json | jq -r 'unique | join(", ")')
+          INFO=$(curl -sf --max-time 10 "${{ steps.tf-outputs.outputs.alb_url }}/api/v2/system/systemInfo" || echo '{}')
+          {
+            echo "### Novelty build under test"
+            echo
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "$INFO" | jq -r '
+              "| Build version | `\(.version // "unavailable")` |",
+              "| Git commit | `\(.gitCommit // "unavailable")` |",
+              "| Commit date | \(.gitCommitDate // "unavailable") |",
+              "| Java runtime | \(.javaRuntimeVersion // "unavailable") |"'
+            echo "| Image digest | \`${DIGESTS:-unavailable}\` |"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Terraform Destroy
         if: always()
