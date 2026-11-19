@@ -165,6 +165,8 @@ module "novelty" {
 | terraform | >= 1.5.0      |
 | aws       | >= 5.0, < 6.0 |
 
+The container health check runs under `bash` inside the container and needs no `curl` or `wget`, so it works with the minimal images as well as earlier ones.
+
 ## Providers
 
 | Name | Version |
