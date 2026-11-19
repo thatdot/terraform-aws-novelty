@@ -32,25 +32,84 @@ locals {
   )
 
   # -----------------------------------------------------------------------------
-  # Novelty License Configuration
+  # JVM Options
   # -----------------------------------------------------------------------------
 
-  # Base Java options for Novelty license configuration
-  license_java_opts = "-Dthatdot.novelty.license-key=${var.license_key} -Dthatdot.novelty.license-server-uri=${var.license_server_uri}"
+  # Lets the JVM read configuration from CONFIG_FORCE_* environment variables
+  # (Typesafe Config). The container image does not enable this itself, and it
+  # is what allows the license key to arrive as an ECS-injected secret.
+  config_env_override_java_opt = "-Dconfig.override_with_env_vars=true"
 
-  # Full JAVA_OPTS combining user-provided and license options
-  java_opts_value = trimspace("${var.java_opts} ${local.license_java_opts}")
+  # Full JDK_JAVA_OPTIONS: user-provided options first, then the module's
+  java_opts_value = join(" ", compact([
+    var.java_opts,
+    local.config_env_override_java_opt,
+  ]))
 
   # -----------------------------------------------------------------------------
   # Container Environment Variables
   # -----------------------------------------------------------------------------
 
-  container_environment = [
-    {
-      name  = "JDK_JAVA_OPTIONS"
-      value = local.java_opts_value
-    }
+  container_environment = concat(
+    [
+      {
+        name  = "JDK_JAVA_OPTIONS"
+        value = local.java_opts_value
+      }
+    ],
+    var.container_environment
+  )
+
+  # -----------------------------------------------------------------------------
+  # Container Secrets
+  # -----------------------------------------------------------------------------
+
+  # License key (read by Novelty as the thatdot.novelty.license-key setting),
+  # followed by any user-provided secrets
+  container_secrets = concat(
+    [
+      {
+        name      = "CONFIG_FORCE_thatdot_novelty_license__key"
+        valueFrom = var.license_key_secret_arn
+      }
+    ],
+    var.container_secrets
+  )
+
+  # -----------------------------------------------------------------------------
+  # Container Health Check
+  # -----------------------------------------------------------------------------
+
+  # Requests the health check path over bash's built-in /dev/tcp and passes on
+  # any 2xx status. The container images ship bash but, from the minimal images
+  # onward, no curl or wget, so the check cannot depend on an HTTP client. The
+  # port and path are passed as arguments ($1, $2) so that a path containing
+  # '%' or quotes cannot alter the script. The request mirrors the image's own
+  # HEALTHCHECK, which ECS does not run.
+  container_health_check_command = [
+    "CMD",
+    "/bin/bash",
+    "-c",
+    "exec 3<>\"/dev/tcp/127.0.0.1/$1\" && printf 'GET %s HTTP/1.0\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' \"$2\" >&3 && read -r _ code _ <&3 && code=$${code%$'\\r'} && [[ $code == 2[0-9][0-9] ]]",
+    "healthcheck",
+    tostring(var.container_port),
+    var.health_check_path,
   ]
+
+  # Every environment variable and secret name in the container. ECS rejects
+  # duplicates, and a caller entry that repeats a module-set name (such as
+  # JDK_JAVA_OPTIONS) would override it.
+  container_variable_names = concat(
+    [for env in local.container_environment : env.name],
+    [for secret in local.container_secrets : secret.name]
+  )
+
+  # ARNs the execution role must be able to read. A Secrets Manager valueFrom
+  # may end in ':json-key:version-stage:version-id'; IAM needs the bare secret ARN.
+  container_secret_arns = distinct([
+    for secret in local.container_secrets :
+    try(regex("^arn:[^:]*:secretsmanager:[^:]*:[^:]*:secret:[^:]+", secret.valueFrom), secret.valueFrom)
+  ])
 
   # Get current AWS region from provider for log configuration
   # This uses a data source since we can't use var.aws_region anymore (provider config is in root module)

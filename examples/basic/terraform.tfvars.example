@@ -13,5 +13,6 @@ aws_region = "us-west-2"
 container_image = "<your-account-id>.dkr.ecr.<region>.amazonaws.com/thatdot/novelty:<tag>"
 
 # Novelty License (Required)
-license_key        = ""                           # Required - your Novelty license key
-license_server_uri = "https://license.thatdot.com" # License server URI
+# Store the key in AWS Secrets Manager first and pass the secret's ARN here:
+#   aws secretsmanager create-secret --name novelty/license-key --secret-string "$NOVELTY_LICENSE_KEY"
+license_key_secret_arn = ""                            # Required - ARN of the secret holding your license key
