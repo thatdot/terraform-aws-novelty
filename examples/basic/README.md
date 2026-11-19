@@ -15,7 +15,7 @@ Simplest deployment of Novelty on AWS ECS Fargate with minimal configuration.
 1. Create `terraform.tfvars`:
 
 ```hcl
-container_image        = "YOUR_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/thatdot/novelty:1.2.0"
+container_image        = "YOUR_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/thatdot/novelty:1.2.1"
 license_key_secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:novelty/license-key-AbCdEf"
 ```
 

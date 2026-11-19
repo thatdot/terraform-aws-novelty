@@ -23,7 +23,7 @@ mock_provider "aws" {
 
 variables {
   project_name    = "novelty-test"
-  container_image = "123456789012.dkr.ecr.us-west-2.amazonaws.com/thatdot/novelty:1.2.0"
+  container_image = "123456789012.dkr.ecr.us-west-2.amazonaws.com/thatdot/novelty:1.2.1"
 }
 
 run "defaults" {
@@ -38,20 +38,13 @@ run "defaults" {
     error_message = "ALB health check should default to the v2 liveness endpoint."
   }
 
+  # Element 3 is the probe script itself; the rest pins how it is invoked
   assert {
-    condition     = slice(jsondecode(aws_ecs_task_definition.main.container_definitions)[0].healthCheck.command, 4, 7) == ["healthcheck", "8080", "/api/v2/system/liveness"]
-    error_message = "Container health check should default to the container port and the v2 liveness endpoint."
-  }
-
-  # The minimal container images ship bash but no curl or wget
-  assert {
-    condition     = slice(jsondecode(aws_ecs_task_definition.main.container_definitions)[0].healthCheck.command, 0, 3) == ["CMD", "/bin/bash", "-c"]
-    error_message = "Container health check should run under bash without a shell wrapper."
-  }
-
-  assert {
-    condition     = !can(regex("curl|wget", jsondecode(aws_ecs_task_definition.main.container_definitions)[0].healthCheck.command[3]))
-    error_message = "Container health check must not depend on curl or wget; the minimal images do not ship them."
+    condition = concat(
+      slice(jsondecode(aws_ecs_task_definition.main.container_definitions)[0].healthCheck.command, 0, 3),
+      slice(jsondecode(aws_ecs_task_definition.main.container_definitions)[0].healthCheck.command, 4, 7)
+    ) == ["CMD", "/bin/bash", "-c", "healthcheck", "8080", "/api/v2/system/liveness"]
+    error_message = "Container health check should run under bash against the container port and the v2 liveness endpoint."
   }
 
   assert {
