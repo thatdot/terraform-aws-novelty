@@ -1,6 +1,5 @@
 # Terraform AWS Novelty Module
 
-[![Terraform Registry](https://img.shields.io/badge/terraform-registry-blue.svg)](https://registry.terraform.io/modules/thatdot/novelty/aws)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 Terraform module to deploy [Novelty](https://thatdot.com/) streaming graph on AWS ECS Fargate with an Application Load Balancer.
@@ -64,8 +63,8 @@ aws ecr create-repository --repository-name thatdot/novelty
 aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin YOUR_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com
 
 # Tag and push your image
-docker tag thatdot/novelty:latest YOUR_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/thatdot/novelty:latest
-docker push YOUR_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/thatdot/novelty:latest
+docker tag thatdot/novelty:1.2.1 YOUR_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/thatdot/novelty:1.2.1
+docker push YOUR_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/thatdot/novelty:1.2.1
 ```
 
 ## License Key
@@ -103,8 +102,7 @@ Two things follow from ECS fetching the secret at task start:
 
 ```hcl
 module "novelty" {
-  source  = "thatdot/novelty/aws"
-  version = "~> 2.0"
+  source = "github.com/thatdot/terraform-aws-novelty?ref=v2.0.0"
 
   project_name = "my-novelty"
 
@@ -124,8 +122,7 @@ output "url" {
 
 ```hcl
 module "novelty" {
-  source  = "thatdot/novelty/aws"
-  version = "~> 2.0"
+  source = "github.com/thatdot/terraform-aws-novelty?ref=v2.0.0"
 
   project_name = "novelty-prod"
   environment  = "prod"
@@ -169,9 +166,9 @@ The container health check runs under `bash` inside the container and needs no `
 
 ## Providers
 
-| Name | Version |
-| ---- | ------- |
-| aws  | >= 5.0  |
+| Name | Version       |
+| ---- | ------------- |
+| aws  | >= 5.0, < 6.0 |
 
 ## Usage
 
@@ -328,7 +325,7 @@ See the [examples](./examples/) directory for complete usage examples:
 
 ```hcl
 module "novelty" {
-  source = "thatdot/novelty/aws"
+  source = "github.com/thatdot/terraform-aws-novelty?ref=v2.0.0"
 
   project_name    = "novelty"
   container_image = "<your-account-id>.dkr.ecr.<region>.amazonaws.com/thatdot/novelty:<tag>"
@@ -344,7 +341,7 @@ module "novelty" {
 
 ```hcl
 module "novelty" {
-  source = "thatdot/novelty/aws"
+  source = "github.com/thatdot/terraform-aws-novelty?ref=v2.0.0"
 
   project_name    = "novelty"
   container_image = "<your-account-id>.dkr.ecr.<region>.amazonaws.com/thatdot/novelty:<tag>"
@@ -375,7 +372,7 @@ The license key has its own input, `license_key_secret_arn` (see [License Key](#
 
 ```hcl
 module "novelty" {
-  source = "thatdot/novelty/aws"
+  source = "github.com/thatdot/terraform-aws-novelty?ref=v2.0.0"
 
   project_name    = "novelty"
   container_image = "<your-account-id>.dkr.ecr.<region>.amazonaws.com/thatdot/novelty:<tag>"
@@ -395,7 +392,7 @@ module "novelty" {
 
 ```hcl
 module "novelty" {
-  source = "thatdot/novelty/aws"
+  source = "github.com/thatdot/terraform-aws-novelty?ref=v2.0.0"
 
   project_name    = "novelty"
   container_image = "<your-account-id>.dkr.ecr.<region>.amazonaws.com/thatdot/novelty:<tag>"
