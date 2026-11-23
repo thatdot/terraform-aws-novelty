@@ -63,8 +63,8 @@ aws ecr create-repository --repository-name thatdot/novelty
 aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin YOUR_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com
 
 # Tag and push your image
-docker tag thatdot/novelty:latest YOUR_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/thatdot/novelty:latest
-docker push YOUR_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/thatdot/novelty:latest
+docker tag thatdot/novelty:1.2.1 YOUR_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/thatdot/novelty:1.2.1
+docker push YOUR_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/thatdot/novelty:1.2.1
 ```
 
 ## License Key
@@ -166,9 +166,9 @@ The container health check runs under `bash` inside the container and needs no `
 
 ## Providers
 
-| Name | Version |
-| ---- | ------- |
-| aws  | >= 5.0  |
+| Name | Version       |
+| ---- | ------------- |
+| aws  | >= 5.0, < 6.0 |
 
 ## Usage
 
